@@ -15,10 +15,9 @@ const (
 	tilesHigh = 45 * 3
 
 	nutrientRate  = 0.0015
-	inorganicRate = 0.0025
+	inorganicRate = 0.0035
 )
 
-// var wsUrl = "ws://localhost:8152/ws"
 var interval float64 = 0.125
 
 var updateInterval = time.Duration(interval * float64(time.Second))
@@ -26,8 +25,15 @@ var tiles [tilesWide][tilesHigh]Tile // 80x45 grid of tiles
 
 // Keep track of nutrient index tuples in a slice of [2]int
 // As well as a list of tiles with nearby nutrients
+
+// Much of this should be moved to the simulation.go file
 var nutrientsNearby = make(map[[2]int]struct{})
 var nutrientTiles = make(map[[2]int]struct{})
+
+func resetNutrientsMaps() {
+	nutrientsNearby = make(map[[2]int]struct{})
+	nutrientTiles = make(map[[2]int]struct{})
+}
 
 // Set all tiles to 0
 func initTiles() {
@@ -180,6 +186,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 		if msg["type"] == "resetTiles" {
 			initTiles()
+			resetNutrientsMaps()
 			addNutrients()
 			addInorganics()
 		}
@@ -190,6 +197,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	initTiles()
+	resetNutrientsMaps() // This is redundant, but it's here for clarity
 	addNutrients()
 	addInorganics()
 	go runSimulation()
