@@ -16,6 +16,7 @@ const (
 
 	nutrientRate  = 0.0015
 	inorganicRate = 0.0035
+	waterRate     = 0.001
 )
 
 var interval float64 = 0.125
@@ -29,10 +30,12 @@ var tiles [tilesWide][tilesHigh]Tile // 80x45 grid of tiles
 // Much of this should be moved to the simulation.go file
 var nutrientsNearby = make(map[[2]int]struct{})
 var nutrientTiles = make(map[[2]int]struct{})
+var waterTiles = make(map[[2]int]struct{})
 
 func resetNutrientsMaps() {
 	nutrientsNearby = make(map[[2]int]struct{})
 	nutrientTiles = make(map[[2]int]struct{})
+	waterTiles = make(map[[2]int]struct{})
 }
 
 // Set all tiles to 0
@@ -40,6 +43,7 @@ func initTiles() {
 	for i := 0; i < tilesWide; i++ {
 		for j := 0; j < tilesHigh; j++ {
 			tiles[i][j].Type = 0
+			tiles[i][j].Nutrient = 0.45
 		}
 	}
 }
@@ -76,6 +80,33 @@ func addInorganics() {
 			randFloat := rand.Float64()
 			if tiles[i][j].Type == 0 && randFloat <= inorganicRate {
 				tiles[i][j].Type = 3
+			}
+		}
+	}
+}
+
+func addWaterPockets() {
+	// Water is represented by a value of 4
+	// water will be added in pockets of size 1 to 9 contiguous tiles
+	waterTiles := make(map[[2]int]struct{})
+	for i := 0; i < tilesWide; i++ {
+		for j := 0; j < tilesHigh; j++ {
+			randFloat := rand.Float64()
+			if randFloat <= waterRate {
+				// Add a pocket of water to the tiles
+				pocketSizeX := rand.Intn(3) + 1
+				pocketSizeY := rand.Intn(3) + 1
+				for x := 0; x < pocketSizeX; x++ {
+					for y := 0; y < pocketSizeY; y++ {
+						if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
+							randFloat2 := rand.Float64()
+							if randFloat2 <= 0.75 {
+								tiles[i+x][j+y].Type = 4
+								waterTiles[[2]int{i + x, j + y}] = struct{}{}
+							}
+						}
+					}
+				}
 			}
 		}
 	}
@@ -188,6 +219,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			initTiles()
 			resetNutrientsMaps()
 			addNutrients()
+			addWaterPockets()
 			addInorganics()
 		}
 	}
@@ -199,6 +231,7 @@ func main() {
 	initTiles()
 	resetNutrientsMaps() // This is redundant, but it's here for clarity
 	addNutrients()
+	addWaterPockets()
 	addInorganics()
 	go runSimulation()
 	http.HandleFunc("/ws", wsHandler)

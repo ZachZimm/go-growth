@@ -31,9 +31,13 @@ func simulateNutrientGrowth() {
 		i, j := coord[0], coord[1]
 		if tiles[i][j].Type == 0 {
 			randFloat := rand.Float64()
-			if randFloat <= 0.4 {
+			if randFloat <= 0.225 {
 				// Add to the nutrient value
-				tiles[i][j].Nutrient += 0.35
+				if tiles[i][j].Type == 0 {
+					tiles[i][j].Nutrient += 0.08
+				} else if tiles[i][j].Type == 2 {
+					tiles[i][j].Nutrient += 0.15
+				}
 
 				if tiles[i][j].Nutrient >= 0.5 {
 					tiles[i][j].Type = 2
@@ -45,7 +49,7 @@ func simulateNutrientGrowth() {
 							ni, nj := i+x, j+y
 							if ni >= 0 && ni < tilesWide && nj >= 0 && nj < tilesHigh {
 								neighborCoord := [2]int{ni, nj}
-								if tiles[ni][nj].Type == 0 {
+								if tiles[ni][nj].Type == 0 || tiles[ni][nj].Type == 2 {
 									newNutrientsNearby[neighborCoord] = struct{}{}
 								}
 							}
@@ -74,11 +78,14 @@ func simulateNutrientDecay() {
 		for j := 0; j < tilesHigh; j++ {
 			rand := rand.Float64()
 			// Check if the tile is a nutrient tile and randomly decay it
-			if tiles[i][j].Type == 2 && (int(rand*100)%2) == 0 {
+			if (tiles[i][j].Type == 2 || tiles[i][j].Type == 0) && (int(rand*100)%2) == 0 {
 				// Decrease the nutrient value
-				tiles[i][j].Nutrient -= (0.035 * (rand + 0.5))
+				tiles[i][j].Nutrient -= (0.02 * (rand + 0.5))
 				if tiles[i][j].Nutrient < 0.5 {
 					tiles[i][j].Type = 0 // Tile becomes ground
+					if tiles[i][j].Nutrient < 0.0 {
+						tiles[i][j].Nutrient = 0.0
+					}
 					// Remove the nutrient tile from the nutrientTiles map
 					// and check if it should be removed from the nutrientsNearby map
 

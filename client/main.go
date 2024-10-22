@@ -206,6 +206,8 @@ func main() {
 					tileColor = rl.Green
 				case 3:
 					tileColor = rl.Brown
+				case 4:
+					tileColor = rl.Blue
 				}
 
 				screenX := (float32(x) - cameraX) * tileSizeX
