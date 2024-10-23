@@ -1,0 +1,7 @@
+{
+	"windowWidth": 1200,
+	"windowHeight": 675,
+	"tileSizeX": 15,
+	"tileSizeY": 15,
+	"wsUrl": "ws://localhost:8152/ws"
+}

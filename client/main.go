@@ -5,14 +5,49 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"os"
 	"time"
 
 	rl "github.com/gen2brain/raylib-go/raylib"
 	"github.com/gorilla/websocket"
 )
 
+// type Config interface{}
+type Config struct {
+	WindowWidth    int     `json:"windowWidth"`
+	WindowHeight   int     `json:"windowHeight"`
+	TileSizeX      float32 `json:"tileSizeX"`
+	TileSizeY      float32 `json:"tileSizeY"`
+	TilesOnScreenX float32 `json:"tilesOnScreenX"`
+	TilesOnScreenY float32 `json:"tilesOnScreenY"`
+	WsUrl          string  `json:"wsUrl"`
+}
+
+func NewConfig() Config {
+	configPath := "config.json"
+	file, err := os.Open(configPath)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("Error opening config file.")
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	config := Config{}
+	err = decoder.Decode(&config)
+	if err != nil {
+		log.Fatal(err)
+		fmt.Println("Error decoding config file.")
+	}
+
+	config.TilesOnScreenX = float32(config.WindowWidth) / config.TileSizeX
+	config.TilesOnScreenY = float32(config.WindowHeight) / config.TileSizeY
+	return config
+}
+
 var (
 	connectionStatus string = "Disconnected"
+	configuration    Config
 )
 
 var (
@@ -22,14 +57,14 @@ var (
 
 // create tilesWide and tilesHigh constants
 const (
-	tilesWide              = 80 * 10
-	tilesHigh              = 45 * 10
-	windowWidth            = 1200
-	windowHeight           = 675
-	tileSizeX      float32 = 15
-	tileSizeY      float32 = 15
-	tilesOnScreenX         = float32(windowWidth) / tileSizeX
-	tilesOnScreenY         = float32(windowHeight) / tileSizeY
+	tilesWide = 80 * 10 // This should come from the server on connection
+	tilesHigh = 45 * 10 // This too
+	// windowWidth            = 1200    // This will come from a config file
+	// windowHeight           = 675     // This too
+	// tileSizeX      float32 = 15
+	// tileSizeY      float32 = 15
+	// tilesOnScreenX         = float32(windowWidth) / tileSizeX
+	// tilesOnScreenY         = float32(windowHeight) / tileSizeY
 )
 
 func sendUpdateTile(wsConn *websocket.Conn, x, y, value int) error {
@@ -82,7 +117,9 @@ func sendResetTiles(wsConn *websocket.Conn) error {
 }
 
 func main() {
-	rl.InitWindow(windowWidth, windowHeight, "Raylib WebSocket Client")
+	// Load configuration
+	configuration = NewConfig()
+	rl.InitWindow(int32(configuration.WindowWidth), int32(configuration.WindowHeight), "Raylib WebSocket Client")
 	defer rl.CloseWindow()
 	// create an 80x45 array of tiles
 	var tiles [tilesWide][tilesHigh]int
@@ -92,14 +129,13 @@ func main() {
 	// WebSocket connection setup
 	var wsConn *websocket.Conn
 	var err error
-	var wsUrl string = "ws://lab:8152/ws"
 	var loggedIn bool = false
 
 	// Start a goroutine to handle the WebSocket connection
 	go func() {
 		for {
 			// Attempt to connect to the WebSocket server
-			wsConn, _, err = websocket.DefaultDialer.Dial(wsUrl, nil)
+			wsConn, _, err = websocket.DefaultDialer.Dial(configuration.WsUrl, nil)
 			if err != nil {
 				log.Println("Connection failed:", err)
 				connectionStatus = "Disconnected"
@@ -129,7 +165,6 @@ func main() {
 					connectionStatus = "Disconnected"
 					break
 				}
-				// log.Printf("Received: %s\n", message)
 				// try to parse the message as a tile update, and update the tiles array
 				// the message is a JSON object with a "type" field whych may be "tiles", and if so it has a "tiles" field which is the actual tile data
 				var msg map[string]interface{}
@@ -176,8 +211,8 @@ func main() {
 		// Calculate the range of tiles to draw
 		tileXStart := int(math.Floor(float64(cameraX)))
 		tileYStart := int(math.Floor(float64(cameraY)))
-		tileXEnd := int(math.Ceil(float64(cameraX + tilesOnScreenX)))
-		tileYEnd := int(math.Ceil(float64(cameraY + tilesOnScreenY)))
+		tileXEnd := int(math.Ceil(float64(cameraX + configuration.TilesOnScreenX)))
+		tileYEnd := int(math.Ceil(float64(cameraY + configuration.TilesOnScreenY)))
 
 		// Clamp the tile indices to valid ranges
 		if tileXStart < 0 {
@@ -216,10 +251,10 @@ func main() {
 					tileColor = rl.Purple
 				}
 
-				screenX := (float32(x) - cameraX) * tileSizeX
-				screenY := (float32(y) - cameraY) * tileSizeY
+				screenX := (float32(x) - cameraX) * configuration.TileSizeX
+				screenY := (float32(y) - cameraY) * configuration.TileSizeY
 
-				rl.DrawRectangle(int32(screenX), int32(screenY), int32(tileSizeX), int32(tileSizeY), tileColor)
+				rl.DrawRectangle(int32(screenX), int32(screenY), int32(configuration.TileSizeX), int32(configuration.TileSizeY), tileColor)
 			}
 		}
 
@@ -227,8 +262,8 @@ func main() {
 		if rl.IsMouseButtonPressed(rl.MouseLeftButton) && connectionStatus == "Connected" {
 			mouseX := rl.GetMouseX()
 			mouseY := rl.GetMouseY()
-			tileX := int(cameraX + float32(mouseX)/tileSizeX)
-			tileY := int(cameraY + float32(mouseY)/tileSizeY)
+			tileX := int(cameraX + float32(mouseX)/configuration.TileSizeX)
+			tileY := int(cameraY + float32(mouseY)/configuration.TileSizeY)
 
 			// Ensure the tile coordinates are within bounds
 			if tileX >= 0 && tileX < tilesWide && tileY >= 0 && tileY < tilesHigh {
@@ -242,7 +277,7 @@ func main() {
 					newValue = 1 // Otherwise, change to white
 				}
 
-				tiles[tileX][tileY] = newValue
+				// tiles[tileX][tileY] = newValue
 
 				// Send the updateTile message to the server
 				err := sendUpdateTile(wsConn, tileX, tileY, newValue)
@@ -252,7 +287,7 @@ func main() {
 			}
 		}
 
-		moveSpeed := 5.0 / tileSizeX // Adjust as needed
+		moveSpeed := 5.0 / configuration.TileSizeX // Adjust as needed
 
 		if rl.IsKeyDown(rl.KeyLeft) {
 			cameraX -= moveSpeed
@@ -274,11 +309,11 @@ func main() {
 		if cameraY < 0 {
 			cameraY = 0
 		}
-		maxCameraX := float32(tilesWide) - tilesOnScreenX
+		maxCameraX := float32(tilesWide) - configuration.TilesOnScreenX
 		if cameraX > maxCameraX {
 			cameraX = maxCameraX
 		}
-		maxCameraY := float32(tilesHigh) - tilesOnScreenY
+		maxCameraY := float32(tilesHigh) - configuration.TilesOnScreenY
 		if cameraY > maxCameraY {
 			cameraY = maxCameraY
 		}
