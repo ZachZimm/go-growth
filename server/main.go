@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	tilesWide = 80 * 30
-	tilesHigh = 45 * 30
+	tilesWide = 80 * 10
+	tilesHigh = 45 * 10
 
 	nutrientRate        = 0.0015
 	inorganicRate       = 0.004

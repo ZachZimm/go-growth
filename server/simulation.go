@@ -131,7 +131,7 @@ func simulateNutrientDecay() {
 			if (tiles[i][j].Type == 2 || tiles[i][j].Type == 0) && (int(rand*100)%2) == 0 {
 				// Decrease the nutrient value
 				// changing the rand offset between 0.45 and 0.55 seems like a good way of varying environment conditions for now
-				tiles[i][j].Nutrient -= (0.055 * (rand + 0.46))
+				tiles[i][j].Nutrient -= (0.055 * (rand + 0.51))
 				if tiles[i][j].Nutrient < nutrientGreenCutOff {
 					tiles[i][j].Type = 0 // Tile becomes ground
 					if tiles[i][j].Nutrient < 0.0 {

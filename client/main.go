@@ -22,8 +22,8 @@ var (
 
 // create tilesWide and tilesHigh constants
 const (
-	tilesWide              = 80 * 30
-	tilesHigh              = 45 * 30
+	tilesWide              = 80 * 10
+	tilesHigh              = 45 * 10
 	windowWidth            = 1200
 	windowHeight           = 675
 	tileSizeX      float32 = 15
@@ -92,7 +92,7 @@ func main() {
 	// WebSocket connection setup
 	var wsConn *websocket.Conn
 	var err error
-	var wsUrl string = "ws://zen:8152/ws"
+	var wsUrl string = "ws://lab:8152/ws"
 	var loggedIn bool = false
 
 	// Start a goroutine to handle the WebSocket connection
