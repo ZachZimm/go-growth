@@ -11,12 +11,13 @@ import (
 )
 
 const (
-	tilesWide = 80 * 3
-	tilesHigh = 45 * 3
+	tilesWide = 80 * 30
+	tilesHigh = 45 * 30
 
-	nutrientRate  = 0.0015
-	inorganicRate = 0.0035
-	waterRate     = 0.001
+	nutrientRate        = 0.0015
+	inorganicRate       = 0.004
+	waterRate           = 0.001
+	nutrientGreenCutOff = 0.18
 )
 
 var interval float64 = 0.125
@@ -31,11 +32,18 @@ var tiles [tilesWide][tilesHigh]Tile // 80x45 grid of tiles
 var nutrientsNearby = make(map[[2]int]struct{})
 var nutrientTiles = make(map[[2]int]struct{})
 var waterTiles = make(map[[2]int]struct{})
+var waterNearby = make(map[[2]int]struct{})
+var waterNearby2 = make(map[[2]int]struct{})
+var inorganicTiles = make(map[[2]int]struct{})
+var inorganicNearby = make(map[[2]int]struct{})
+var inorganicNearby2 = make(map[[2]int]struct{})
 
 func resetNutrientsMaps() {
 	nutrientsNearby = make(map[[2]int]struct{})
 	nutrientTiles = make(map[[2]int]struct{})
 	waterTiles = make(map[[2]int]struct{})
+	waterNearby = make(map[[2]int]struct{})
+	waterNearby2 = make(map[[2]int]struct{})
 }
 
 // Set all tiles to 0
@@ -43,7 +51,7 @@ func initTiles() {
 	for i := 0; i < tilesWide; i++ {
 		for j := 0; j < tilesHigh; j++ {
 			tiles[i][j].Type = 0
-			tiles[i][j].Nutrient = 0.45
+			tiles[i][j].Nutrient = 0.09
 		}
 	}
 }
@@ -80,9 +88,68 @@ func addInorganics() {
 			randFloat := rand.Float64()
 			if tiles[i][j].Type == 0 && randFloat <= inorganicRate {
 				tiles[i][j].Type = 3
+				inorganicTiles[[2]int{i, j}] = struct{}{}
 			}
 		}
 	}
+
+	// loop through the 8 surrounding tiles and add them to the inorganicNearby list
+	// additionally, add tiles 2 away (minus the corners) to the inorganicNearby2 list
+	for coord := range inorganicTiles {
+		i := coord[0]
+		j := coord[1]
+		for x := -1; x <= 1; x++ {
+			for y := -1; y <= 1; y++ {
+				if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
+					// Add the nearby inorganic tile to the inorganicNearby map
+					if !(x == 0 && y == 0) {
+						inorganicNearby[[2]int{i + x, j + y}] = struct{}{}
+					}
+				}
+			}
+		}
+
+		// populate the inorganicNearby2 map without the corners and without repeating the tiles in the inorganicNearby
+		for x := -2; x <= 2; x++ {
+			for y := -2; y <= 2; y++ {
+				if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
+					if !(x == 0 && y == 0) && !(x == 2 && y == 2) && !(x == -2 && y == -2) && !(x == 2 && y == -2) && !(x == -2 && y == 2) {
+						inorganicNearby2[[2]int{i + x, j + y}] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+}
+
+func populateWaterNearbyMap(iI int, jJ int) {
+	// loop through the 8 tiles surrounding the given index and add them to the waterNearby list
+	// additionally, add tiles 2 away (minus the corners) to the waterNearby2 list
+
+	// populate only the waterNearby map
+	for x := -1; x <= 1; x++ {
+		for y := -1; y <= 1; y++ {
+			if iI+x >= 0 && iI+x < tilesWide && jJ+y >= 0 && jJ+y < tilesHigh {
+				// Add the nearby water tile to the waterNearby map
+				if !(x == 0 && y == 0) {
+					waterNearby[[2]int{iI + x, jJ + y}] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// populate the waterNearby2 map without the corners and without repeating the tiles in the waterNearby map or the center tile
+	for x := -2; x <= 2; x++ {
+		for y := -2; y <= 2; y++ {
+			if iI+x >= 0 && iI+x < tilesWide && jJ+y >= 0 && jJ+y < tilesHigh {
+				// Add the nearby water tile to the waterNearby2 map
+				if !(x == 0 && y == 0) && !(x == 2 && y == 2) && !(x == 2 && y == -2) && !(x == -2 && y == 2) && !(x == -2 && y == -2) {
+					waterNearby2[[2]int{iI + x, jJ + y}] = struct{}{}
+				}
+			}
+		}
+	}
+
 }
 
 func addWaterPockets() {
@@ -110,6 +177,11 @@ func addWaterPockets() {
 			}
 		}
 	}
+	// populate the waterNearby and waterNearby2 maps
+	for key := range waterTiles {
+		populateWaterNearbyMap(key[0], key[1])
+	}
+
 }
 
 var upgrader = websocket.Upgrader{

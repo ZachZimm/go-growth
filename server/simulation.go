@@ -18,7 +18,57 @@ func runSimulation() {
 		select {
 		case <-ticker.C:
 			simulateNutrientDecay()
+			simulateWaterNutrition()
+			simulateInorganicNutrientDecay()
 			simulateNutrientGrowth()
+
+		}
+	}
+}
+
+func simulateWaterNutrition() {
+	// create a map containing the set of tiles in (waterNearby or waterNearby2) and (nutrientTiles or nutrientsNearby)
+	// then iterate over this list and add nutrients according to whether the tile is in waterNearby or waterNearby2
+
+	wateredNutrientValue := 0.035
+	wateredNutrientNearbyValue := 0.0175
+
+	// wateredTiles := make(map[[2]int]struct{})
+	for coord := range waterNearby {
+		// wateredTiles[coord] = struct{}{}
+		if _, ok := nutrientTiles[coord]; ok {
+			tiles[coord[0]][coord[1]].Nutrient += wateredNutrientValue
+		}
+		if _, ok := nutrientsNearby[coord]; ok {
+			tiles[coord[0]][coord[1]].Nutrient += wateredNutrientNearbyValue
+		}
+
+	}
+	for coord := range waterNearby2 {
+		// wateredTiles[coord] = struct{}{}
+		if _, ok := nutrientTiles[coord]; ok {
+			tiles[coord[0]][coord[1]].Nutrient += wateredNutrientValue / 3
+		}
+		if _, ok := nutrientsNearby[coord]; ok {
+			tiles[coord[0]][coord[1]].Nutrient += wateredNutrientNearbyValue / 3
+		}
+	}
+}
+
+func simulateInorganicNutrientDecay() {
+	nearbyInorganicDecayValue := 0.02
+	nearbyInorganicDecayValue2 := 0.01
+	for coord := range inorganicNearby {
+		i, j := coord[0], coord[1]
+		if tiles[i][j].Nutrient > 0 {
+			tiles[i][j].Nutrient -= nearbyInorganicDecayValue
+		}
+	}
+
+	for coord := range inorganicNearby2 {
+		i, j := coord[0], coord[1]
+		if tiles[i][j].Nutrient > 0 {
+			tiles[i][j].Nutrient -= nearbyInorganicDecayValue2
 		}
 	}
 }
@@ -31,15 +81,16 @@ func simulateNutrientGrowth() {
 		i, j := coord[0], coord[1]
 		if tiles[i][j].Type == 0 {
 			randFloat := rand.Float64()
-			if randFloat <= 0.225 {
+			if randFloat <= 0.55 {
+				randFloat = rand.Float64()
 				// Add to the nutrient value
 				if tiles[i][j].Type == 0 {
-					tiles[i][j].Nutrient += 0.08
+					tiles[i][j].Nutrient += 0.08 * (randFloat + 0.4)
 				} else if tiles[i][j].Type == 2 {
-					tiles[i][j].Nutrient += 0.15
+					tiles[i][j].Nutrient += 0.15 * (randFloat + 0.4)
 				}
 
-				if tiles[i][j].Nutrient >= 0.5 {
+				if tiles[i][j].Nutrient >= nutrientGreenCutOff {
 					tiles[i][j].Type = 2
 					newNutrients[coord] = struct{}{}
 
@@ -61,7 +112,6 @@ func simulateNutrientGrowth() {
 				newNutrientsNearby[coord] = struct{}{}
 			}
 		}
-
 	}
 
 	// Update nutrientTiles
@@ -80,8 +130,9 @@ func simulateNutrientDecay() {
 			// Check if the tile is a nutrient tile and randomly decay it
 			if (tiles[i][j].Type == 2 || tiles[i][j].Type == 0) && (int(rand*100)%2) == 0 {
 				// Decrease the nutrient value
-				tiles[i][j].Nutrient -= (0.02 * (rand + 0.5))
-				if tiles[i][j].Nutrient < 0.5 {
+				// changing the rand offset between 0.45 and 0.55 seems like a good way of varying environment conditions for now
+				tiles[i][j].Nutrient -= (0.055 * (rand + 0.46))
+				if tiles[i][j].Nutrient < nutrientGreenCutOff {
 					tiles[i][j].Type = 0 // Tile becomes ground
 					if tiles[i][j].Nutrient < 0.0 {
 						tiles[i][j].Nutrient = 0.0

@@ -22,8 +22,8 @@ var (
 
 // create tilesWide and tilesHigh constants
 const (
-	tilesWide              = 80 * 3
-	tilesHigh              = 45 * 3
+	tilesWide              = 80 * 30
+	tilesHigh              = 45 * 30
 	windowWidth            = 1200
 	windowHeight           = 675
 	tileSizeX      float32 = 15
@@ -92,7 +92,7 @@ func main() {
 	// WebSocket connection setup
 	var wsConn *websocket.Conn
 	var err error
-	var wsUrl string = "ws://localhost:8152/ws"
+	var wsUrl string = "ws://zen:8152/ws"
 	var loggedIn bool = false
 
 	// Start a goroutine to handle the WebSocket connection
@@ -163,6 +163,8 @@ func main() {
 		}
 	}()
 
+	var groundColor = rl.NewColor(176, 143, 28, 255)
+	var nutrientColor = rl.NewColor(16, 144, 16, 255)
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 
@@ -199,15 +201,19 @@ func main() {
 				// Determine the color based on tileValue
 				switch tileValue {
 				case 0:
-					tileColor = rl.Black
+					// tileColor = rl.Black
+					tileColor = groundColor
 				case 1:
 					tileColor = rl.RayWhite
 				case 2:
-					tileColor = rl.Green
+					// tileColor = rl.Green
+					tileColor = nutrientColor
 				case 3:
 					tileColor = rl.Brown
 				case 4:
 					tileColor = rl.Blue
+				case 5:
+					tileColor = rl.Purple
 				}
 
 				screenX := (float32(x) - cameraX) * tileSizeX
@@ -230,10 +236,10 @@ func main() {
 				var newValue int
 
 				// Determine the new value based on the current tile color
-				if currentValue == 0 {
-					newValue = 1 // If black, change to white
-				} else {
+				if currentValue == 1 {
 					newValue = 0 // If white, change to black
+				} else {
+					newValue = 1 // Otherwise, change to white
 				}
 
 				tiles[tileX][tileY] = newValue
