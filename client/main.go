@@ -59,12 +59,6 @@ var (
 const (
 	tilesWide = 80 * 10 // This should come from the server on connection
 	tilesHigh = 45 * 10 // This too
-	// windowWidth            = 1200    // This will come from a config file
-	// windowHeight           = 675     // This too
-	// tileSizeX      float32 = 15
-	// tileSizeY      float32 = 15
-	// tilesOnScreenX         = float32(windowWidth) / tileSizeX
-	// tilesOnScreenY         = float32(windowHeight) / tileSizeY
 )
 
 func sendUpdateTile(wsConn *websocket.Conn, x, y, value int) error {
@@ -200,10 +194,11 @@ func main() {
 
 	var groundColor = rl.NewColor(176, 143, 28, 255)
 	var nutrientColor = rl.NewColor(16, 144, 16, 255)
+	var oilColor = rl.NewColor(64, 64, 64, 255)
+	var concreteColor = rl.NewColor(128, 128, 128, 255)
+
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
-
-		// rl.ClearBackground(rl.RayWhite)
 
 		// Display the connection status
 		rl.DrawText("WebSocket Client", 10, 10, 20, rl.DarkGray)
@@ -248,7 +243,9 @@ func main() {
 				case 4:
 					tileColor = rl.Blue
 				case 5:
-					tileColor = rl.Purple
+					tileColor = oilColor
+				case 6:
+					tileColor = concreteColor
 				}
 
 				screenX := (float32(x) - cameraX) * configuration.TileSizeX
@@ -289,16 +286,16 @@ func main() {
 
 		moveSpeed := 5.0 / configuration.TileSizeX // Adjust as needed
 
-		if rl.IsKeyDown(rl.KeyLeft) {
+		if rl.IsKeyDown(rl.KeyLeft) || rl.IsKeyDown(rl.KeyA) {
 			cameraX -= moveSpeed
 		}
-		if rl.IsKeyDown(rl.KeyRight) {
+		if rl.IsKeyDown(rl.KeyRight) || rl.IsKeyDown(rl.KeyD) {
 			cameraX += moveSpeed
 		}
-		if rl.IsKeyDown(rl.KeyUp) {
+		if rl.IsKeyDown(rl.KeyUp) || rl.IsKeyDown(rl.KeyW) {
 			cameraY -= moveSpeed
 		}
-		if rl.IsKeyDown(rl.KeyDown) {
+		if rl.IsKeyDown(rl.KeyDown) || rl.IsKeyDown(rl.KeyS) {
 			cameraY += moveSpeed
 		}
 

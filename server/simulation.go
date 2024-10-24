@@ -21,7 +21,6 @@ func runSimulation() {
 			simulateWaterNutrition()
 			simulateInorganicNutrientDecay()
 			simulateNutrientGrowth()
-
 		}
 	}
 }
@@ -30,12 +29,10 @@ func simulateWaterNutrition() {
 	// create a map containing the set of tiles in (waterNearby or waterNearby2) and (nutrientTiles or nutrientsNearby)
 	// then iterate over this list and add nutrients according to whether the tile is in waterNearby or waterNearby2
 
-	wateredNutrientValue := 0.035
-	wateredNutrientNearbyValue := 0.0175
+	wateredNutrientValue := 0.045
+	wateredNutrientNearbyValue := 0.03
 
-	// wateredTiles := make(map[[2]int]struct{})
 	for coord := range waterNearby {
-		// wateredTiles[coord] = struct{}{}
 		if _, ok := nutrientTiles[coord]; ok {
 			tiles[coord[0]][coord[1]].Nutrient += wateredNutrientValue
 		}
@@ -45,7 +42,6 @@ func simulateWaterNutrition() {
 
 	}
 	for coord := range waterNearby2 {
-		// wateredTiles[coord] = struct{}{}
 		if _, ok := nutrientTiles[coord]; ok {
 			tiles[coord[0]][coord[1]].Nutrient += wateredNutrientValue / 3
 		}
@@ -58,6 +54,7 @@ func simulateWaterNutrition() {
 func simulateInorganicNutrientDecay() {
 	nearbyInorganicDecayValue := 0.02
 	nearbyInorganicDecayValue2 := 0.01
+	nearbyOilspoutDecayValue := 0.03
 	for coord := range inorganicNearby {
 		i, j := coord[0], coord[1]
 		if tiles[i][j].Nutrient > 0 {
@@ -69,6 +66,13 @@ func simulateInorganicNutrientDecay() {
 		i, j := coord[0], coord[1]
 		if tiles[i][j].Nutrient > 0 {
 			tiles[i][j].Nutrient -= nearbyInorganicDecayValue2
+		}
+	}
+
+	for coord := range oilspoutNearby {
+		i, j := coord[0], coord[1]
+		if tiles[i][j].Nutrient > 0 {
+			tiles[i][j].Nutrient -= nearbyOilspoutDecayValue
 		}
 	}
 }

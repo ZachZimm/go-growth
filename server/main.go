@@ -15,9 +15,11 @@ const (
 	tilesHigh = 45 * 10
 
 	nutrientRate        = 0.0015
-	inorganicRate       = 0.004
-	waterRate           = 0.001
 	nutrientGreenCutOff = 0.18
+
+	inorganicRate = 0.004
+	waterRate     = 0.001
+	oilspoutRate  = 0.001
 )
 
 var interval float64 = 0.125
@@ -37,6 +39,8 @@ var waterNearby2 = make(map[[2]int]struct{})
 var inorganicTiles = make(map[[2]int]struct{})
 var inorganicNearby = make(map[[2]int]struct{})
 var inorganicNearby2 = make(map[[2]int]struct{})
+var oilspoutTiles = make(map[[2]int]struct{})
+var oilspoutNearby = make(map[[2]int]struct{})
 
 func resetNutrientsMaps() {
 	nutrientsNearby = make(map[[2]int]struct{})
@@ -71,8 +75,44 @@ func addNutrients() {
 				for x := -1; x <= 1; x++ {
 					for y := -1; y <= 1; y++ {
 						if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
-							// Add the nearby nutrient tile to the nutrientsNearby map
 							nutrientsNearby[[2]int{i + x, j + y}] = struct{}{}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func addStartingPlatform() {
+	// The starting platform is a 5x5 square (missing outermost corners) of concrete tiles
+	// concrete tiles are represented by a value of 6
+	randX := rand.Intn(tilesWide - 6)
+	randY := rand.Intn(tilesHigh - 6)
+	// randX = 10
+	// randY = 10
+	for i := randX; i < randX+6; i++ {
+		for j := randY; j < randY+6; j++ {
+			tiles[i][j].Type = 6
+		}
+	}
+	fmt.Printf("Starting platform at (%d, %d)\n", randX, randY)
+}
+
+func addOilspouts() {
+	// Oilspouts are represented by a value of 5
+	for i := 0; i < tilesWide; i++ {
+		for j := 0; j < tilesHigh; j++ {
+			randFloat := rand.Float64()
+			if tiles[i][j].Type == 0 && randFloat <= oilspoutRate {
+				tiles[i][j].Type = 5
+				oilspoutTiles[[2]int{i, j}] = struct{}{}
+
+				// loop through the 8 surrounding tiles and add them to the oilspoutNearby list
+				for x := -1; x <= 1; x++ {
+					for y := -1; y <= 1; y++ {
+						if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
+							oilspoutNearby[[2]int{i + x, j + y}] = struct{}{}
 						}
 					}
 				}
@@ -293,6 +333,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			addNutrients()
 			addWaterPockets()
 			addInorganics()
+			addOilspouts()
+			addStartingPlatform()
 		}
 	}
 
@@ -305,6 +347,8 @@ func main() {
 	addNutrients()
 	addWaterPockets()
 	addInorganics()
+	addOilspouts()
+	addStartingPlatform()
 	go runSimulation()
 	http.HandleFunc("/ws", wsHandler)
 
