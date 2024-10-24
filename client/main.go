@@ -285,18 +285,21 @@ func main() {
 		}
 
 		moveSpeed := 5.0 / configuration.TileSizeX // Adjust as needed
-
+		var speedMultiplier float32 = 1.0
+		if rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) {
+			speedMultiplier = 2.0
+		}
 		if rl.IsKeyDown(rl.KeyLeft) || rl.IsKeyDown(rl.KeyA) {
-			cameraX -= moveSpeed
+			cameraX -= moveSpeed * speedMultiplier
 		}
 		if rl.IsKeyDown(rl.KeyRight) || rl.IsKeyDown(rl.KeyD) {
-			cameraX += moveSpeed
+			cameraX += moveSpeed * speedMultiplier
 		}
 		if rl.IsKeyDown(rl.KeyUp) || rl.IsKeyDown(rl.KeyW) {
-			cameraY -= moveSpeed
+			cameraY -= moveSpeed * speedMultiplier
 		}
 		if rl.IsKeyDown(rl.KeyDown) || rl.IsKeyDown(rl.KeyS) {
-			cameraY += moveSpeed
+			cameraY += moveSpeed * speedMultiplier
 		}
 
 		// Clamp camera position

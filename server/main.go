@@ -87,13 +87,16 @@ func addNutrients() {
 func addStartingPlatform() {
 	// The starting platform is a 5x5 square (missing outermost corners) of concrete tiles
 	// concrete tiles are represented by a value of 6
-	randX := rand.Intn(tilesWide - 6)
-	randY := rand.Intn(tilesHigh - 6)
-	// randX = 10
-	// randY = 10
-	for i := randX; i < randX+6; i++ {
-		for j := randY; j < randY+6; j++ {
-			tiles[i][j].Type = 6
+	randX := rand.Intn(tilesWide - 7)
+	randY := rand.Intn(tilesHigh - 7)
+	randX = 10
+	randY = 10
+	for i := randX; i < randX+7; i++ {
+		for j := randY; j < randY+7; j++ {
+			// check if the tile is an outermost corner
+			if !((i == randX || i == randX+6) && (j == randY || j == randY+6)) {
+				tiles[i][j].Type = 6
+			}
 		}
 	}
 	fmt.Printf("Starting platform at (%d, %d)\n", randX, randY)

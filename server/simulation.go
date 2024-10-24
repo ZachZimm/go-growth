@@ -29,8 +29,8 @@ func simulateWaterNutrition() {
 	// create a map containing the set of tiles in (waterNearby or waterNearby2) and (nutrientTiles or nutrientsNearby)
 	// then iterate over this list and add nutrients according to whether the tile is in waterNearby or waterNearby2
 
-	wateredNutrientValue := 0.045
-	wateredNutrientNearbyValue := 0.03
+	wateredNutrientValue := 0.05
+	wateredNutrientNearbyValue := 0.035
 
 	for coord := range waterNearby {
 		if _, ok := nutrientTiles[coord]; ok {
