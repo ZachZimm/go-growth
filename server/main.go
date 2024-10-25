@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -13,13 +12,6 @@ import (
 const (
 	tilesWide = 80 * 10
 	tilesHigh = 45 * 10
-
-	nutrientRate        = 0.0015
-	nutrientGreenCutOff = 0.18
-
-	inorganicRate = 0.004
-	waterRate     = 0.001
-	oilspoutRate  = 0.001
 )
 
 var interval float64 = 0.125
@@ -27,213 +19,13 @@ var interval float64 = 0.125
 var updateInterval = time.Duration(interval * float64(time.Second))
 var tiles [tilesWide][tilesHigh]Tile // 80x45 grid of tiles
 
-// Keep track of nutrient index tuples in a slice of [2]int
-// As well as a list of tiles with nearby nutrients
-
-// Much of this should be moved to the simulation.go file
-var nutrientsNearby = make(map[[2]int]struct{})
-var nutrientTiles = make(map[[2]int]struct{})
-var waterTiles = make(map[[2]int]struct{})
-var waterNearby = make(map[[2]int]struct{})
-var waterNearby2 = make(map[[2]int]struct{})
-var inorganicTiles = make(map[[2]int]struct{})
-var inorganicNearby = make(map[[2]int]struct{})
-var inorganicNearby2 = make(map[[2]int]struct{})
-var oilspoutTiles = make(map[[2]int]struct{})
-var oilspoutNearby = make(map[[2]int]struct{})
-
-func resetNutrientsMaps() {
-	nutrientsNearby = make(map[[2]int]struct{})
-	nutrientTiles = make(map[[2]int]struct{})
-	waterTiles = make(map[[2]int]struct{})
-	waterNearby = make(map[[2]int]struct{})
-	waterNearby2 = make(map[[2]int]struct{})
-}
-
-// Set all tiles to 0
-func initTiles() {
-	for i := 0; i < tilesWide; i++ {
-		for j := 0; j < tilesHigh; j++ {
-			tiles[i][j].Type = 0
-			tiles[i][j].Nutrient = 0.09
-		}
-	}
-}
-
-func addNutrients() {
-	// Nutrients are represented by a value of 2
-	for i := 0; i < tilesWide; i++ {
-		for j := 0; j < tilesHigh; j++ {
-			randFloat := rand.Float64()
-			if tiles[i][j].Type == 0 && randFloat <= nutrientRate {
-				tiles[i][j].Type = 2
-				tiles[i][j].Nutrient = 1
-				// Add the nutrient tile to the nutrientTiles map
-				nutrientTiles[[2]int{i, j}] = struct{}{}
-
-				// loop through the 8 surrounding tiles and add them to the nutrientsNearby list
-				for x := -1; x <= 1; x++ {
-					for y := -1; y <= 1; y++ {
-						if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
-							nutrientsNearby[[2]int{i + x, j + y}] = struct{}{}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-func addStartingPlatform() {
-	// The starting platform is a 5x5 square (missing outermost corners) of concrete tiles
-	// concrete tiles are represented by a value of 6
-	randX := rand.Intn(tilesWide - 7)
-	randY := rand.Intn(tilesHigh - 7)
-	randX = 10
-	randY = 10
-	for i := randX; i < randX+7; i++ {
-		for j := randY; j < randY+7; j++ {
-			// check if the tile is an outermost corner
-			if !((i == randX || i == randX+6) && (j == randY || j == randY+6)) {
-				tiles[i][j].Type = 6
-			}
-		}
-	}
-	fmt.Printf("Starting platform at (%d, %d)\n", randX, randY)
-}
-
-func addOilspouts() {
-	// Oilspouts are represented by a value of 5
-	for i := 0; i < tilesWide; i++ {
-		for j := 0; j < tilesHigh; j++ {
-			randFloat := rand.Float64()
-			if tiles[i][j].Type == 0 && randFloat <= oilspoutRate {
-				tiles[i][j].Type = 5
-				oilspoutTiles[[2]int{i, j}] = struct{}{}
-
-				// loop through the 8 surrounding tiles and add them to the oilspoutNearby list
-				for x := -1; x <= 1; x++ {
-					for y := -1; y <= 1; y++ {
-						if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
-							oilspoutNearby[[2]int{i + x, j + y}] = struct{}{}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
-func addInorganics() {
-	// Rocks are represented by a value of 3
-	for i := 0; i < tilesWide; i++ {
-		for j := 0; j < tilesHigh; j++ {
-			randFloat := rand.Float64()
-			if tiles[i][j].Type == 0 && randFloat <= inorganicRate {
-				tiles[i][j].Type = 3
-				inorganicTiles[[2]int{i, j}] = struct{}{}
-			}
-		}
-	}
-
-	// loop through the 8 surrounding tiles and add them to the inorganicNearby list
-	// additionally, add tiles 2 away (minus the corners) to the inorganicNearby2 list
-	for coord := range inorganicTiles {
-		i := coord[0]
-		j := coord[1]
-		for x := -1; x <= 1; x++ {
-			for y := -1; y <= 1; y++ {
-				if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
-					// Add the nearby inorganic tile to the inorganicNearby map
-					if !(x == 0 && y == 0) {
-						inorganicNearby[[2]int{i + x, j + y}] = struct{}{}
-					}
-				}
-			}
-		}
-
-		// populate the inorganicNearby2 map without the corners and without repeating the tiles in the inorganicNearby
-		for x := -2; x <= 2; x++ {
-			for y := -2; y <= 2; y++ {
-				if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
-					if !(x == 0 && y == 0) && !(x == 2 && y == 2) && !(x == -2 && y == -2) && !(x == 2 && y == -2) && !(x == -2 && y == 2) {
-						inorganicNearby2[[2]int{i + x, j + y}] = struct{}{}
-					}
-				}
-			}
-		}
-	}
-}
-
-func populateWaterNearbyMap(iI int, jJ int) {
-	// loop through the 8 tiles surrounding the given index and add them to the waterNearby list
-	// additionally, add tiles 2 away (minus the corners) to the waterNearby2 list
-
-	// populate only the waterNearby map
-	for x := -1; x <= 1; x++ {
-		for y := -1; y <= 1; y++ {
-			if iI+x >= 0 && iI+x < tilesWide && jJ+y >= 0 && jJ+y < tilesHigh {
-				// Add the nearby water tile to the waterNearby map
-				if !(x == 0 && y == 0) {
-					waterNearby[[2]int{iI + x, jJ + y}] = struct{}{}
-				}
-			}
-		}
-	}
-
-	// populate the waterNearby2 map without the corners and without repeating the tiles in the waterNearby map or the center tile
-	for x := -2; x <= 2; x++ {
-		for y := -2; y <= 2; y++ {
-			if iI+x >= 0 && iI+x < tilesWide && jJ+y >= 0 && jJ+y < tilesHigh {
-				// Add the nearby water tile to the waterNearby2 map
-				if !(x == 0 && y == 0) && !(x == 2 && y == 2) && !(x == 2 && y == -2) && !(x == -2 && y == 2) && !(x == -2 && y == -2) {
-					waterNearby2[[2]int{iI + x, jJ + y}] = struct{}{}
-				}
-			}
-		}
-	}
-
-}
-
-func addWaterPockets() {
-	// Water is represented by a value of 4
-	// water will be added in pockets of size 1 to 9 contiguous tiles
-	waterTiles := make(map[[2]int]struct{})
-	for i := 0; i < tilesWide; i++ {
-		for j := 0; j < tilesHigh; j++ {
-			randFloat := rand.Float64()
-			if randFloat <= waterRate {
-				// Add a pocket of water to the tiles
-				pocketSizeX := rand.Intn(3) + 1
-				pocketSizeY := rand.Intn(3) + 1
-				for x := 0; x < pocketSizeX; x++ {
-					for y := 0; y < pocketSizeY; y++ {
-						if i+x >= 0 && i+x < tilesWide && j+y >= 0 && j+y < tilesHigh {
-							randFloat2 := rand.Float64()
-							if randFloat2 <= 0.75 {
-								tiles[i+x][j+y].Type = 4
-								waterTiles[[2]int{i + x, j + y}] = struct{}{}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	// populate the waterNearby and waterNearby2 maps
-	for key := range waterTiles {
-		populateWaterNearbyMap(key[0], key[1])
-	}
-
-}
-
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true // Allow all connections
 	},
 }
 
-// Function to send tile updates to a connected client
+// Sends tile updates to a connected client
 func sendTileUpdates(conn *websocket.Conn) {
 	ticker := time.NewTicker(updateInterval)
 	defer ticker.Stop()
@@ -331,13 +123,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if msg["type"] == "resetTiles" {
-			initTiles()
-			resetNutrientsMaps()
-			addNutrients()
-			addWaterPockets()
-			addInorganics()
-			addOilspouts()
-			addStartingPlatform()
+			resetSimulation()
 		}
 	}
 
@@ -345,13 +131,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	initTiles()
-	resetNutrientsMaps() // This is redundant, but it's here for clarity
-	addNutrients()
-	addWaterPockets()
-	addInorganics()
-	addOilspouts()
-	addStartingPlatform()
+	resetSimulation()
 	go runSimulation()
 	http.HandleFunc("/ws", wsHandler)
 
