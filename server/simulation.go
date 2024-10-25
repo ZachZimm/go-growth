@@ -326,7 +326,6 @@ func simulateNutrientGrowth() {
 func simulateNutrientDecay(cycleMultiplier float64) {
 	for i := 0; i < tilesWide; i++ {
 		// print the first 4 decimals of cycleMultiplier
-		fmt.Printf("%.4f\n", cycleMultiplier)
 		for j := 0; j < tilesHigh; j++ {
 			rand := rand.Float64()
 			// Check if the tile is a nutrient tile and randomly decay it

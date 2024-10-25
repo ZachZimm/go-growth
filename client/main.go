@@ -284,22 +284,42 @@ func main() {
 			}
 		}
 
-		moveSpeed := 5.0 / configuration.TileSizeX // Adjust as needed
+		moveSpeed := 500.0 / configuration.TileSizeX // Adjust as needed
 		var speedMultiplier float32 = 1.0
 		if rl.IsKeyDown(rl.KeyLeftShift) || rl.IsKeyDown(rl.KeyRightShift) {
 			speedMultiplier = 2.0
 		}
 		if rl.IsKeyDown(rl.KeyLeft) || rl.IsKeyDown(rl.KeyA) {
-			cameraX -= moveSpeed * speedMultiplier
+			cameraX -= moveSpeed * speedMultiplier * rl.GetFrameTime()
 		}
 		if rl.IsKeyDown(rl.KeyRight) || rl.IsKeyDown(rl.KeyD) {
-			cameraX += moveSpeed * speedMultiplier
+			cameraX += moveSpeed * speedMultiplier * rl.GetFrameTime()
 		}
 		if rl.IsKeyDown(rl.KeyUp) || rl.IsKeyDown(rl.KeyW) {
-			cameraY -= moveSpeed * speedMultiplier
+			cameraY -= moveSpeed * speedMultiplier * rl.GetFrameTime()
 		}
 		if rl.IsKeyDown(rl.KeyDown) || rl.IsKeyDown(rl.KeyS) {
-			cameraY += moveSpeed * speedMultiplier
+			cameraY += moveSpeed * speedMultiplier * rl.GetFrameTime()
+		}
+
+		if rl.IsKeyPressed(rl.KeyPageUp) || rl.IsKeyPressed(rl.KeyEqual) || rl.IsKeyPressed(rl.KeyKpAdd) {
+			if configuration.TileSizeX < 128 && configuration.TileSizeY < 128 {
+				configuration.TileSizeX += 1
+				configuration.TileSizeY += 1
+
+				configuration.TilesOnScreenX = float32(rl.GetScreenWidth()) / configuration.TileSizeX
+				configuration.TilesOnScreenY = float32(rl.GetScreenHeight()) / configuration.TileSizeY
+			}
+		}
+
+		if rl.IsKeyPressed(rl.KeyPageDown) || rl.IsKeyPressed(rl.KeyMinus) || rl.IsKeyPressed(rl.KeyKpSubtract) {
+			if configuration.TileSizeX > 1 && configuration.TileSizeY > 1 {
+				configuration.TileSizeX -= 1
+				configuration.TileSizeY -= 1
+
+				configuration.TilesOnScreenX = float32(rl.GetScreenWidth()) / configuration.TileSizeX
+				configuration.TilesOnScreenY = float32(rl.GetScreenHeight()) / configuration.TileSizeY
+			}
 		}
 
 		// Clamp camera position
