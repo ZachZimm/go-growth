@@ -197,6 +197,7 @@ func main() {
 	var oilColor = rl.NewColor(64, 64, 64, 255)
 	var concreteColor = rl.NewColor(128, 128, 128, 255)
 	var lowlandsColor = rl.NewColor(177, 144, 103, 255)
+	var mountainColor = rl.NewColor(140, 141, 139, 255)
 	var highMountainColor = rl.NewColor(202, 215, 215, 255)
 
 	for !rl.WindowShouldClose() {
@@ -241,7 +242,7 @@ func main() {
 					// tileColor = rl.Green
 					tileColor = nutrientColor
 				case 3:
-					tileColor = rl.Brown
+					tileColor = mountainColor
 				case 4:
 					tileColor = rl.Blue
 				case 5:

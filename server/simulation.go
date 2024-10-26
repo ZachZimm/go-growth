@@ -58,25 +58,25 @@ const numTileTypes = 8
 
 // create a const called notAllowedMatrix which is a 7x7 matrix of integers
 var notAllowedMatrix = [][]int{
-	{0, 1, 0, 0, 1, 0, 1, 0}, // 0 - ground
-	{1, 0, 1, 0, 1, 1, 1, 1}, // 1 - high mountain
-	{0, 1, 0, 1, 1, 1, 1, 0}, // 2 - nutrient
-	{0, 0, 0, 0, 1, 1, 1, 1}, // 3 - mountain
-	{0, 1, 0, 0, 0, 1, 1, 0}, // 4 - water
-	{0, 1, 1, 0, 1, 0, 1, 0}, // 5 - oilspout
-	{1, 1, 1, 1, 1, 1, 1, 1}, // 6 - concrete
-	{0, 1, 0, 1, 0, 0, 1, 0}, // 7 - lowlands
+	{0, 1, 0, 0, 1, 0, 1, 0},  // 0 - ground
+	{1, 0, 1, 0, 2, 1, 1, 2},  // 1 - high mountain
+	{0, 1, 0, 1, 0, 1, 1, 0},  // 2 - nutrient
+	{0, -2, 0, 0, 1, 1, 1, 1}, // 3 - mountain
+	{1, 3, 0, 1, -3, 1, 1, 0}, // 4 - water
+	{0, 2, 1, 1, 1, 0, 1, 0},  // 5 - oilspout
+	{1, 1, 1, 1, 1, 1, 1, 1},  // 6 - concrete
+	{0, 2, 0, 1, -1, 0, 1, 0}, // 7 - lowlands
 }
 
 var tileTypeStartingDistribution_Int64 = []int64{
-	35, // 0 - ground
+	37, // 0 - ground
 	2,  // 1 - high mountain
-	18, // 2 - nutrient
-	11, // 3 - mountain
-	5,  // 4 - water
-	4,  // 5 - oilspout
+	14, // 2 - nutrient
+	13, // 3 - mountain
+	3,  // 4 - water
+	2,  // 5 - oilspout
 	00, // 6 - concrete
-	25, // 7 - lowlands
+	29, // 7 - lowlands
 }
 
 const startingTileType = 0
@@ -105,9 +105,8 @@ func initTiles() {
 	}
 }
 
-func checkConflicts(x, y int) int {
+func checkConflicts(x, y, testRange int) int {
 	conflicts := 0
-	testRange := 4
 	tx, ty := 0, 0
 	for i := -testRange; i <= testRange; i++ {
 		for j := -testRange; j <= testRange; j++ {
@@ -119,26 +118,25 @@ func checkConflicts(x, y int) int {
 	return conflicts
 }
 
-func leastConflicts() bool {
+func leastConflicts(tries, testRange int) bool {
 	success := true
 	x, y := 0, 0
 	conflicts := 0
-	tries := 30000
 	for i := 0; i < tilesWide; i++ {
 		fmt.Println("Least conflicts completion: ", float64(i)/float64(tilesWide)*100.0, "%")
 		for j := 0; j < tilesHigh; j++ {
 			x = int(lehmer.Int63() % tilesWide)
 			y = int(lehmer.Int63() % tilesHigh)
-			conflicts = checkConflicts(x, y)
-			if conflicts > 0 || tiles[x][y].Type == startingTileType {
+			conflicts = checkConflicts(x, y, testRange)
+			if conflicts > 0 {
 				success = false
 				bestType := 0
 				leastConflicts := 100
 				tempT, tempC := 0, 0
 				for t := 0; t < tries; t++ {
-					tempT = rand.Int() % numTileTypes
+					tempT = int(lehmer.Int63()) % numTileTypes
 					tiles[x][y].Type = tempT
-					tempC = checkConflicts(x, y)
+					tempC = checkConflicts(x, y, testRange)
 					if tempC < leastConflicts {
 						leastConflicts = tempC
 						bestType = tempT
@@ -500,7 +498,15 @@ func resetSimulation() {
 	// addInorganics()
 	// addOilspouts()
 	// addStartingPlatform()
-	leastConflicts()
+	numTries := 1800
+	testRange := 3
+
+	leastConflicts(numTries, testRange)
+	leastConflicts(numTries, testRange-1)
+	leastConflicts(numTries, testRange+1)
+	leastConflicts(numTries, testRange-1)
+	// leastConflicts(numTries/2, testRange-1)
+	// leastConflicts(numTries/4, testRange-2)
 	fmt.Println("Finished generating world")
 	fmt.Printf("Time elapsed: %v\n", time.Since(startTime))
 	// go runSimulation()
