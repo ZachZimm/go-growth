@@ -19,12 +19,14 @@ const (
 	nutrientRate        = 0.0015
 	nutrientGreenCutOff = 0.18
 
-	inorganicRate = 0.004
-	waterRate     = 0.001
-	oilspoutRate  = 0.001
+	inorganicRate           = 0.004
+	waterRate               = 0.001
+	oilspoutRate            = 0.001
+	groundTileStartNutrient = 0.09
 )
 
-// Much of this should be moved to the simulation.go file
+var endSimulation = false
+
 var nutrientsNearby = make(map[[2]int]struct{})
 var nutrientTiles = make(map[[2]int]struct{})
 var waterTiles = make(map[[2]int]struct{})
@@ -44,14 +46,109 @@ func resetNutrientsMaps() {
 	waterNearby2 = make(map[[2]int]struct{})
 }
 
-// Set all tiles to 0
+// -1 - undefined
+// 0 - ground
+// 1 - high mountain
+// 2 - nutrient
+// 3 - mountain
+// 4 - water
+// 5 - oilspout
+// 6 - concrete
+const numTileTypes = 8
+
+// create a const called notAllowedMatrix which is a 7x7 matrix of integers
+var notAllowedMatrix = [][]int{
+	{0, 1, 0, 0, 1, 0, 1, 0}, // 0 - ground
+	{1, 0, 1, 0, 1, 1, 1, 1}, // 1 - high mountain
+	{0, 1, 0, 1, 1, 1, 1, 0}, // 2 - nutrient
+	{0, 0, 0, 0, 1, 1, 1, 1}, // 3 - mountain
+	{0, 1, 0, 0, 0, 1, 1, 0}, // 4 - water
+	{0, 1, 1, 0, 1, 0, 1, 0}, // 5 - oilspout
+	{1, 1, 1, 1, 1, 1, 1, 1}, // 6 - concrete
+	{0, 1, 0, 1, 0, 0, 1, 0}, // 7 - lowlands
+}
+
+var tileTypeStartingDistribution_Int64 = []int64{
+	35, // 0 - ground
+	2,  // 1 - high mountain
+	18, // 2 - nutrient
+	11, // 3 - mountain
+	5,  // 4 - water
+	4,  // 5 - oilspout
+	00, // 6 - concrete
+	25, // 7 - lowlands
+}
+
+const startingTileType = 0
+
+var lehmer *Lehmer
+
+func getRandomTileTypeByDistribution() int {
+	rand := lehmer.Int63() % 100
+	for i, v := range tileTypeStartingDistribution_Int64 {
+		rand -= v
+		if rand <= 0 {
+			return i
+		}
+	}
+	return 0
+}
+
+// Set all tiles to -1
 func initTiles() {
 	for i := 0; i < tilesWide; i++ {
 		for j := 0; j < tilesHigh; j++ {
-			tiles[i][j].Type = 0
-			tiles[i][j].Nutrient = 0.09
+			// tiles[i][j].Type = startingTileType
+			tiles[i][j].Type = getRandomTileTypeByDistribution()
+			tiles[i][j].Nutrient = groundTileStartNutrient
 		}
 	}
+}
+
+func checkConflicts(x, y int) int {
+	conflicts := 0
+	testRange := 4
+	tx, ty := 0, 0
+	for i := -testRange; i <= testRange; i++ {
+		for j := -testRange; j <= testRange; j++ {
+			tx = (x + i + tilesWide) % tilesWide
+			ty = (y + j + tilesHigh) % tilesHigh
+			conflicts += notAllowedMatrix[tiles[x][y].Type][tiles[tx][ty].Type]
+		}
+	}
+	return conflicts
+}
+
+func leastConflicts() bool {
+	success := true
+	x, y := 0, 0
+	conflicts := 0
+	tries := 30000
+	for i := 0; i < tilesWide; i++ {
+		fmt.Println("Least conflicts completion: ", float64(i)/float64(tilesWide)*100.0, "%")
+		for j := 0; j < tilesHigh; j++ {
+			x = int(lehmer.Int63() % tilesWide)
+			y = int(lehmer.Int63() % tilesHigh)
+			conflicts = checkConflicts(x, y)
+			if conflicts > 0 || tiles[x][y].Type == startingTileType {
+				success = false
+				bestType := 0
+				leastConflicts := 100
+				tempT, tempC := 0, 0
+				for t := 0; t < tries; t++ {
+					tempT = rand.Int() % numTileTypes
+					tiles[x][y].Type = tempT
+					tempC = checkConflicts(x, y)
+					if tempC < leastConflicts {
+						leastConflicts = tempC
+						bestType = tempT
+					}
+				}
+				tiles[x][y].Type = bestType
+			}
+		}
+	}
+	return success
 }
 
 func addNutrients() {
@@ -365,6 +462,7 @@ func simulateNutrientDecay(cycleMultiplier float64) {
 }
 
 func runSimulation() {
+	endSimulation = false
 	var iterationsOfCycle float64 = math.Floor(rand.Float64() * ticksPerCycle)
 	var iterationAddAmount float64 = 1
 	ticker := time.NewTicker(updateInterval)
@@ -383,15 +481,27 @@ func runSimulation() {
 			iterationAddAmount = -iterationAddAmount
 		}
 		iterationsOfCycle += iterationAddAmount
+
+		if endSimulation {
+			break
+		}
 	}
 }
 
 func resetSimulation() {
+	lehmer = NewLehmer(rand.Int63())
+	endSimulation = true
+	fmt.Println("Generating world")
+	startTime := time.Now()
 	initTiles()
-	resetNutrientsMaps()
-	addNutrients()
-	addWaterPockets()
-	addInorganics()
-	addOilspouts()
-	addStartingPlatform()
+	// resetNutrientsMaps()
+	// addNutrients()
+	// addWaterPockets()
+	// addInorganics()
+	// addOilspouts()
+	// addStartingPlatform()
+	leastConflicts()
+	fmt.Println("Finished generating world")
+	fmt.Printf("Time elapsed: %v\n", time.Since(startTime))
+	// go runSimulation()
 }

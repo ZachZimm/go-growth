@@ -196,6 +196,8 @@ func main() {
 	var nutrientColor = rl.NewColor(16, 144, 16, 255)
 	var oilColor = rl.NewColor(64, 64, 64, 255)
 	var concreteColor = rl.NewColor(128, 128, 128, 255)
+	var lowlandsColor = rl.NewColor(177, 144, 103, 255)
+	var highMountainColor = rl.NewColor(202, 215, 215, 255)
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
@@ -234,7 +236,7 @@ func main() {
 					// tileColor = rl.Black
 					tileColor = groundColor
 				case 1:
-					tileColor = rl.RayWhite
+					tileColor = highMountainColor
 				case 2:
 					// tileColor = rl.Green
 					tileColor = nutrientColor
@@ -246,6 +248,8 @@ func main() {
 					tileColor = oilColor
 				case 6:
 					tileColor = concreteColor
+				case 7:
+					tileColor = lowlandsColor
 				}
 
 				screenX := (float32(x) - cameraX) * configuration.TileSizeX

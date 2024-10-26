@@ -131,9 +131,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	resetSimulation()
-	go runSimulation()
 	http.HandleFunc("/ws", wsHandler)
+	go resetSimulation()
+	// go runSimulation()
 
 	fmt.Println("WebSocket server starting on :8152")
 	err := http.ListenAndServe(":8152", nil)
