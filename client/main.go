@@ -57,8 +57,8 @@ var (
 
 // create tilesWide and tilesHigh constants
 const (
-	tilesWide = 80 * 10 // This should come from the server on connection
-	tilesHigh = 45 * 10 // This too
+	tilesWide = 80 * 30 // This should come from the server on connection
+	tilesHigh = 45 * 30 // This too
 )
 
 func sendUpdateTile(wsConn *websocket.Conn, x, y, value int) error {
@@ -118,7 +118,7 @@ func main() {
 	// create an 80x45 array of tiles
 	var tiles [tilesWide][tilesHigh]int
 
-	rl.SetTargetFPS(120)
+	rl.SetTargetFPS(60)
 
 	// WebSocket connection setup
 	var wsConn *websocket.Conn
@@ -192,13 +192,23 @@ func main() {
 		}
 	}()
 
-	var groundColor = rl.NewColor(176, 143, 28, 255)
-	var nutrientColor = rl.NewColor(16, 144, 16, 255)
-	var oilColor = rl.NewColor(64, 64, 64, 255)
-	var concreteColor = rl.NewColor(128, 128, 128, 255)
-	var lowlandsColor = rl.NewColor(177, 144, 103, 255)
-	var mountainColor = rl.NewColor(140, 141, 139, 255)
-	var highMountainColor = rl.NewColor(202, 215, 215, 255)
+	// var groundColor = rl.NewColor(176, 143, 28, 255)
+	// var nutrientColor = rl.NewColor(16, 144, 16, 255)
+	// var oilColor = rl.NewColor(64, 64, 64, 255)
+	// var concreteColor = rl.NewColor(128, 128, 128, 255)
+	// var lowlandsColor = rl.NewColor(177, 144, 103, 255)
+	// var mountainColor = rl.NewColor(140, 141, 139, 255)
+	// var highMountainColor = rl.NewColor(202, 215, 215, 255)
+
+	var deepWater = rl.NewColor(0, 0, 128, 255)
+	var shallowWater = rl.NewColor(0, 0, 255, 255)
+	// var sand = rl.NewColor(240, 240, 64, 255)
+	var sand = rl.NewColor(228, 228, 103, 255)
+	var grass = rl.NewColor(0, 255, 0, 255)
+	var forest = rl.NewColor(0, 128, 0, 255)
+	var dirt = rl.NewColor(128, 64, 0, 255)
+	var mountains = rl.NewColor(128, 128, 128, 255)
+	var highMountains = rl.NewColor(255, 255, 255, 255)
 
 	for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
@@ -235,22 +245,30 @@ func main() {
 				switch tileValue {
 				case 0:
 					// tileColor = rl.Black
-					tileColor = groundColor
+					// tileColor = groundColor
+					tileColor = deepWater
 				case 1:
-					tileColor = highMountainColor
+					// tileColor = highMountainColor
+					tileColor = shallowWater
 				case 2:
 					// tileColor = rl.Green
-					tileColor = nutrientColor
+					// tileColor = nutrientColor
+					tileColor = sand
 				case 3:
-					tileColor = mountainColor
+					// tileColor = mountainColor
+					tileColor = grass
 				case 4:
-					tileColor = rl.Blue
+					// tileColor = rl.Blue
+					tileColor = forest
 				case 5:
-					tileColor = oilColor
+					// tileColor = oilColor
+					tileColor = dirt
 				case 6:
-					tileColor = concreteColor
+					// tileColor = concreteColor
+					tileColor = mountains
 				case 7:
-					tileColor = lowlandsColor
+					// tileColor = lowlandsColor
+					tileColor = highMountains
 				}
 
 				screenX := (float32(x) - cameraX) * configuration.TileSizeX

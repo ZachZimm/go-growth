@@ -6,11 +6,14 @@ import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/aquilax/go-perlin"
 )
 
 type Tile struct {
 	Type     int
 	Nutrient float64
+	Altitude float64
 }
 
 const (
@@ -103,6 +106,108 @@ func initTiles() {
 			tiles[i][j].Nutrient = groundTileStartNutrient
 		}
 	}
+}
+
+var (
+	alpha       = 3.
+	beta        = 4.
+	n     int32 = 9
+	seed  int64 = 100
+
+	deepWater     = 0
+	shallowWater  = 1
+	sand          = 2
+	grass         = 3
+	forest        = 4
+	dirt          = 5
+	mountains     = 6
+	highMountains = 7
+)
+
+func initTilesFloats() {
+	for i := 0; i < tilesWide; i++ {
+		for j := 0; j < tilesHigh; j++ {
+			tiles[i][j].Altitude = 0.5
+		}
+	}
+}
+
+func normalizeTileAltitudes() {
+	foundMin := 1.0
+	foundMax := 0.0
+	for i := 0; i < tilesWide; i++ {
+		for j := 0; j < tilesHigh; j++ {
+			foundMin = math.Min(foundMin, tiles[i][j].Altitude)
+			foundMax = math.Max(foundMax, tiles[i][j].Altitude)
+		}
+	}
+	for i := 0; i < tilesWide; i++ {
+		for j := 0; j < tilesHigh; j++ {
+			tiles[i][j].Altitude = (tiles[i][j].Altitude - foundMin) / (foundMax - foundMin)
+		}
+	}
+}
+
+func getTileFromFloatSwitch(tile float64) int {
+	// Find the bucket that the tile value falls into
+	// using a switch statement
+	switch {
+	case tile < 0.18:
+		return deepWater
+	case tile < 0.3:
+		return shallowWater
+	case tile < 0.4:
+		return sand
+	case tile < 0.5:
+		return grass
+	case tile < 0.7:
+		return forest
+	case tile < 0.82:
+		return dirt
+	case tile < 0.95:
+		return mountains
+	default:
+		return highMountains
+	}
+}
+
+func setTileTypesFromAltitudes() {
+	for i := 0; i < tilesWide; i++ {
+		for j := 0; j < tilesHigh; j++ {
+			tiles[i][j].Type = getTileFromFloatSwitch(tiles[i][j].Altitude)
+		}
+	}
+}
+
+func setTilesRandomly_perlin(willModify bool) {
+	seed = lehmer.Int63()
+	p := perlin.NewPerlin(alpha, beta, n, seed)
+	for x := 0; x < tilesWide; x++ {
+		for y := 0; y < tilesHigh; y++ {
+			randValue := p.Noise2D(float64(x)/float64(tilesWide), float64(y)/float64(tilesHigh))
+			randValue = math.Min(math.Max(randValue, 0), 1)
+			if willModify {
+				oldValue := tiles[x][y].Altitude
+				newValue := (oldValue * randValue) + 0.25
+				newValue = math.Min(math.Max(newValue, 0), 1)
+				tiles[x][y].Altitude = (oldValue + newValue) / 2
+			} else {
+				tiles[x][y].Altitude = randValue
+			}
+
+			tiles[x][y].Type = getTileFromFloatSwitch(tiles[x][y].Altitude)
+		}
+	}
+}
+
+func generatePerlinMap(iterations int) {
+	initTilesFloats()
+	for i := 0; i < iterations; i++ {
+		setTilesRandomly_perlin(true)
+	}
+	normalizeTileAltitudes()
+	setTileTypesFromAltitudes()
+
 }
 
 func checkConflicts(x, y, testRange int) int {
@@ -491,20 +596,23 @@ func resetSimulation() {
 	endSimulation = true
 	fmt.Println("Generating world")
 	startTime := time.Now()
-	initTiles()
+	// initTiles()
+	generatePerlinMap(3)
 	// resetNutrientsMaps()
 	// addNutrients()
 	// addWaterPockets()
 	// addInorganics()
 	// addOilspouts()
 	// addStartingPlatform()
-	numTries := 1800
-	testRange := 3
 
-	leastConflicts(numTries, testRange)
-	leastConflicts(numTries, testRange-1)
-	leastConflicts(numTries, testRange+1)
-	leastConflicts(numTries, testRange-1)
+	// numTries := 1800
+	// testRange := 3
+
+	// leastConflicts(numTries, testRange)
+	// leastConflicts(numTries, testRange-1)
+	// leastConflicts(numTries, testRange+1)
+	// leastConflicts(numTries, testRange-1)
+
 	// leastConflicts(numTries/2, testRange-1)
 	// leastConflicts(numTries/4, testRange-2)
 	fmt.Println("Finished generating world")

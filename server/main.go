@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	tilesWide = 80 * 10
-	tilesHigh = 45 * 10
+	tilesWide = 80 * 30
+	tilesHigh = 45 * 30
 )
 
 var interval float64 = 0.125
