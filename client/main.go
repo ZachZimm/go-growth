@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -12,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// type Config interface{}
 type Config struct {
 	WindowWidth    int     `json:"windowWidth"`
 	WindowHeight   int     `json:"windowHeight"`
@@ -48,9 +48,7 @@ func NewConfig() Config {
 var (
 	connectionStatus string = "Disconnected"
 	configuration    Config
-)
 
-var (
 	cameraX float32 = 0
 	cameraY float32 = 0
 )
@@ -114,6 +112,8 @@ func main() {
 	// Load configuration
 	configuration = NewConfig()
 	rl.InitWindow(int32(configuration.WindowWidth), int32(configuration.WindowHeight), "Raylib WebSocket Client")
+	renderTexture := rl.LoadRenderTexture(int32(configuration.WindowWidth), int32(configuration.WindowHeight))
+	defer rl.UnloadRenderTexture(renderTexture)
 	defer rl.CloseWindow()
 	// create an 80x45 array of tiles
 	var tiles [tilesWide][tilesHigh]int
@@ -124,6 +124,7 @@ func main() {
 	var wsConn *websocket.Conn
 	var err error
 	var loggedIn bool = false
+	var newState bool = false
 
 	// Start a goroutine to handle the WebSocket connection
 	go func() {
@@ -148,10 +149,11 @@ func main() {
 					break
 				}
 				loggedIn = true
-
+				newState = true
 			}
 
 			// Read messages in a loop
+			var lastMessage []byte
 			for {
 				_, message, err := wsConn.ReadMessage()
 				if err != nil {
@@ -159,6 +161,15 @@ func main() {
 					connectionStatus = "Disconnected"
 					break
 				}
+				// check if the message is the same as the last one
+				if bytes.Equal(lastMessage, message) {
+					newState = false
+					continue
+				}
+
+				lastMessage = message
+				newState = true
+
 				// try to parse the message as a tile update, and update the tiles array
 				// the message is a JSON object with a "type" field whych may be "tiles", and if so it has a "tiles" field which is the actual tile data
 				var msg map[string]interface{}
@@ -168,7 +179,6 @@ func main() {
 					continue
 				}
 				if msg["type"] == "tiles" { // update the tiles array
-					// the "tiles" field is a 2d array of int of size 80x45
 					tileData, ok := msg["tiles"].([]interface{})
 					if !ok {
 						log.Println("Invalid tiles format")
@@ -192,12 +202,8 @@ func main() {
 		}
 	}()
 
-	// var groundColor = rl.NewColor(176, 143, 28, 255)
-	// var nutrientColor = rl.NewColor(16, 144, 16, 255)
 	// var oilColor = rl.NewColor(64, 64, 64, 255)
 	// var concreteColor = rl.NewColor(128, 128, 128, 255)
-	// var lowlandsColor = rl.NewColor(177, 144, 103, 255)
-	// var mountainColor = rl.NewColor(140, 141, 139, 255)
 	// var highMountainColor = rl.NewColor(202, 215, 215, 255)
 
 	var deepWater = rl.NewColor(0, 0, 128, 255)
@@ -211,10 +217,11 @@ func main() {
 	var highMountains = rl.NewColor(255, 255, 255, 255)
 
 	for !rl.WindowShouldClose() {
-		rl.BeginDrawing()
-
-		// Display the connection status
-		rl.DrawText("WebSocket Client", 10, 10, 20, rl.DarkGray)
+		statusText := "Status: " + connectionStatus
+		statusColor := rl.Red
+		if connectionStatus == "Connected" {
+			statusColor = rl.Green
+		}
 
 		// Calculate the range of tiles to draw
 		tileXStart := int(math.Floor(float64(cameraX)))
@@ -236,47 +243,51 @@ func main() {
 			tileYEnd = tilesHigh
 		}
 
-		// Draw the tiles
-		for x := tileXStart; x < tileXEnd; x++ {
-			for y := tileYStart; y < tileYEnd; y++ {
-				tileValue := tiles[x][y]
-				var tileColor rl.Color
-				// Determine the color based on tileValue
-				switch tileValue {
-				case 0:
-					// tileColor = rl.Black
-					// tileColor = groundColor
-					tileColor = deepWater
-				case 1:
-					// tileColor = highMountainColor
-					tileColor = shallowWater
-				case 2:
-					// tileColor = rl.Green
-					// tileColor = nutrientColor
-					tileColor = sand
-				case 3:
-					// tileColor = mountainColor
-					tileColor = grass
-				case 4:
-					// tileColor = rl.Blue
-					tileColor = forest
-				case 5:
-					// tileColor = oilColor
-					tileColor = dirt
-				case 6:
-					// tileColor = concreteColor
-					tileColor = mountains
-				case 7:
-					// tileColor = lowlandsColor
-					tileColor = highMountains
+		if newState {
+			rl.BeginTextureMode(renderTexture)
+			rl.ClearBackground(rl.Black)
+			// Draw the tiles
+			for x := tileXStart; x < tileXEnd; x++ {
+				for y := tileYStart; y < tileYEnd; y++ {
+					tileValue := tiles[x][y]
+					var tileColor rl.Color
+					// Determine the color based on tileValue
+					switch tileValue {
+					case 0:
+						tileColor = deepWater
+					case 1:
+						tileColor = shallowWater
+					case 2:
+						tileColor = sand
+					case 3:
+						tileColor = grass
+					case 4:
+						tileColor = forest
+					case 5:
+						tileColor = dirt
+					case 6:
+						tileColor = mountains
+					case 7:
+						tileColor = highMountains
+					}
+
+					screenX := (float32(x) - cameraX) * configuration.TileSizeX
+					screenY := (float32(y) - cameraY) * configuration.TileSizeY
+
+					rl.DrawRectangle(int32(screenX), int32(screenY), int32(configuration.TileSizeX), int32(configuration.TileSizeY), tileColor)
 				}
-
-				screenX := (float32(x) - cameraX) * configuration.TileSizeX
-				screenY := (float32(y) - cameraY) * configuration.TileSizeY
-
-				rl.DrawRectangle(int32(screenX), int32(screenY), int32(configuration.TileSizeX), int32(configuration.TileSizeY), tileColor)
 			}
+			rl.EndTextureMode()
+			// invert the texture
 		}
+
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.Black)
+
+		rl.DrawTexture(renderTexture.Texture, 0, 0, rl.White)
+
+		rl.DrawText(statusText, 10, 40, 20, statusColor)
+		rl.EndDrawing()
 
 		// Handle mouse input to update tiles
 		if rl.IsMouseButtonPressed(rl.MouseLeftButton) && connectionStatus == "Connected" {
@@ -297,8 +308,6 @@ func main() {
 					newValue = 1 // Otherwise, change to white
 				}
 
-				// tiles[tileX][tileY] = newValue
-
 				// Send the updateTile message to the server
 				err := sendUpdateTile(wsConn, tileX, tileY, newValue)
 				if err != nil {
@@ -314,17 +323,20 @@ func main() {
 		}
 		if rl.IsKeyDown(rl.KeyLeft) || rl.IsKeyDown(rl.KeyA) {
 			cameraX -= moveSpeed * speedMultiplier * rl.GetFrameTime()
+			newState = true
 		}
 		if rl.IsKeyDown(rl.KeyRight) || rl.IsKeyDown(rl.KeyD) {
 			cameraX += moveSpeed * speedMultiplier * rl.GetFrameTime()
+			newState = true
 		}
 		if rl.IsKeyDown(rl.KeyUp) || rl.IsKeyDown(rl.KeyW) {
-			cameraY -= moveSpeed * speedMultiplier * rl.GetFrameTime()
+			cameraY += moveSpeed * speedMultiplier * rl.GetFrameTime()
+			newState = true
 		}
 		if rl.IsKeyDown(rl.KeyDown) || rl.IsKeyDown(rl.KeyS) {
-			cameraY += moveSpeed * speedMultiplier * rl.GetFrameTime()
+			cameraY -= moveSpeed * speedMultiplier * rl.GetFrameTime()
+			newState = true
 		}
-
 		if rl.IsKeyPressed(rl.KeyPageUp) || rl.IsKeyPressed(rl.KeyEqual) || rl.IsKeyPressed(rl.KeyKpAdd) {
 			if configuration.TileSizeX < 128 && configuration.TileSizeY < 128 {
 				configuration.TileSizeX += 1
@@ -333,6 +345,7 @@ func main() {
 				configuration.TilesOnScreenX = float32(rl.GetScreenWidth()) / configuration.TileSizeX
 				configuration.TilesOnScreenY = float32(rl.GetScreenHeight()) / configuration.TileSizeY
 			}
+			newState = true
 		}
 
 		if rl.IsKeyPressed(rl.KeyPageDown) || rl.IsKeyPressed(rl.KeyMinus) || rl.IsKeyPressed(rl.KeyKpSubtract) {
@@ -343,6 +356,7 @@ func main() {
 				configuration.TilesOnScreenX = float32(rl.GetScreenWidth()) / configuration.TileSizeX
 				configuration.TilesOnScreenY = float32(rl.GetScreenHeight()) / configuration.TileSizeY
 			}
+			newState = true
 		}
 
 		// Clamp camera position
@@ -367,15 +381,6 @@ func main() {
 				log.Println("Error sending resetTiles message:", err)
 			}
 		}
-
-		statusText := "Status: " + connectionStatus
-		statusColor := rl.Red
-		if connectionStatus == "Connected" {
-			statusColor = rl.Green
-		}
-		rl.DrawText(statusText, 10, 40, 20, statusColor)
-
-		rl.EndDrawing()
 	}
 
 	// Clean up the WebSocket connection on exit
