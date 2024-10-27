@@ -216,6 +216,9 @@ func main() {
 	var mountains = rl.NewColor(128, 128, 128, 255)
 	var highMountains = rl.NewColor(255, 255, 255, 255)
 
+	var shouldDraw = true
+	var lastDrawTime = time.Now()
+
 	for !rl.WindowShouldClose() {
 		statusText := "Status: " + connectionStatus
 		statusColor := rl.Red
@@ -243,7 +246,7 @@ func main() {
 			tileYEnd = tilesHigh
 		}
 
-		if newState {
+		if newState || shouldDraw {
 			rl.BeginTextureMode(renderTexture)
 			rl.ClearBackground(rl.Black)
 			// Draw the tiles
@@ -278,7 +281,8 @@ func main() {
 				}
 			}
 			rl.EndTextureMode()
-			// invert the texture
+			shouldDraw = true
+			lastDrawTime = time.Now()
 		}
 
 		rl.BeginDrawing()
@@ -357,6 +361,13 @@ func main() {
 				configuration.TilesOnScreenY = float32(rl.GetScreenHeight()) / configuration.TileSizeY
 			}
 			newState = true
+		}
+
+		if newState {
+			shouldDraw = true
+		}
+		if (!newState && shouldDraw) && time.Since(lastDrawTime) >= 1*time.Second {
+			shouldDraw = false
 		}
 
 		// Clamp camera position
