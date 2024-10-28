@@ -288,7 +288,12 @@ func main() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.Black)
 
-		rl.DrawTexture(renderTexture.Texture, 0, 0, rl.White)
+		sourceRec := rl.NewRectangle(0, 0, float32(renderTexture.Texture.Width), float32(-1*renderTexture.Texture.Height))
+		destRec := rl.NewRectangle(0, 0, float32(renderTexture.Texture.Width), float32(renderTexture.Texture.Height))
+		originVector := rl.NewVector2(0, 0)
+		roation := 0.0
+		tintColor := rl.White
+		rl.DrawTexturePro(renderTexture.Texture, sourceRec, destRec, originVector, float32(roation), tintColor)
 
 		rl.DrawText(statusText, 10, 40, 20, statusColor)
 		rl.EndDrawing()
@@ -300,13 +305,6 @@ func main() {
 
 			distFromCenterY := mouseY - int32(configuration.WindowHeight/2)
 			distFromCenterY = int32(math.Max(float64(distFromCenterY), float64(0-distFromCenterY)))
-
-			// Creating the texture involves flipping the y axis, so we need to adjust the mouse position
-			if mouseY > int32(configuration.WindowHeight/2) {
-				mouseY -= 2 * distFromCenterY
-			} else {
-				mouseY += 2 * distFromCenterY
-			}
 
 			tileX := int(cameraX + float32(mouseX)/configuration.TileSizeX)
 			tileY := int(cameraY + float32(mouseY)/configuration.TileSizeY)
@@ -345,31 +343,44 @@ func main() {
 			newState = true
 		}
 		if rl.IsKeyDown(rl.KeyUp) || rl.IsKeyDown(rl.KeyW) {
-			cameraY += moveSpeed * speedMultiplier * rl.GetFrameTime()
+			cameraY -= moveSpeed * speedMultiplier * rl.GetFrameTime()
 			newState = true
 		}
 		if rl.IsKeyDown(rl.KeyDown) || rl.IsKeyDown(rl.KeyS) {
-			cameraY -= moveSpeed * speedMultiplier * rl.GetFrameTime()
+			cameraY += moveSpeed * speedMultiplier * rl.GetFrameTime()
 			newState = true
 		}
 		if rl.IsKeyPressed(rl.KeyPageUp) || rl.IsKeyPressed(rl.KeyEqual) || rl.IsKeyPressed(rl.KeyKpAdd) {
 			if configuration.TileSizeX < 128 && configuration.TileSizeY < 128 {
+				centerX := cameraX + configuration.TilesOnScreenX/2.0
+				centerY := cameraY + configuration.TilesOnScreenY/2.0
+
 				configuration.TileSizeX += 1
 				configuration.TileSizeY += 1
 
 				configuration.TilesOnScreenX = float32(rl.GetScreenWidth()) / configuration.TileSizeX
 				configuration.TilesOnScreenY = float32(rl.GetScreenHeight()) / configuration.TileSizeY
+				// Center the new camera position so we zoom in on the center of the screen
+				cameraX = centerX - configuration.TilesOnScreenX/2.0
+				cameraY = centerY - configuration.TilesOnScreenY/2.0
 			}
 			newState = true
 		}
 
 		if rl.IsKeyPressed(rl.KeyPageDown) || rl.IsKeyPressed(rl.KeyMinus) || rl.IsKeyPressed(rl.KeyKpSubtract) {
 			if configuration.TileSizeX > 1 && configuration.TileSizeY > 1 {
+				centerX := cameraX + configuration.TilesOnScreenX/2.0
+				centerY := cameraY + configuration.TilesOnScreenY/2.0
+
 				configuration.TileSizeX -= 1
 				configuration.TileSizeY -= 1
 
 				configuration.TilesOnScreenX = float32(rl.GetScreenWidth()) / configuration.TileSizeX
 				configuration.TilesOnScreenY = float32(rl.GetScreenHeight()) / configuration.TileSizeY
+
+				// Center the new camera position so we zoom in on the center of the screen
+				cameraX = centerX - configuration.TilesOnScreenX/2.0
+				cameraY = centerY - configuration.TilesOnScreenY/2.0
 			}
 			newState = true
 		}

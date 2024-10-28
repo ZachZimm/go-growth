@@ -3,5 +3,5 @@
 	"windowHeight": 675,
 	"tileSizeX": 8,
 	"tileSizeY": 8,
-	"wsUrl": "ws://localhost:8152/ws"
+	"wsUrl": "ws://lab:8152/ws"
 }
