@@ -297,6 +297,17 @@ func main() {
 		if rl.IsMouseButtonPressed(rl.MouseLeftButton) && connectionStatus == "Connected" {
 			mouseX := rl.GetMouseX()
 			mouseY := rl.GetMouseY()
+
+			distFromCenterY := mouseY - int32(configuration.WindowHeight/2)
+			distFromCenterY = int32(math.Max(float64(distFromCenterY), float64(0-distFromCenterY)))
+
+			// Creating the texture involves flipping the y axis, so we need to adjust the mouse position
+			if mouseY > int32(configuration.WindowHeight/2) {
+				mouseY -= 2 * distFromCenterY
+			} else {
+				mouseY += 2 * distFromCenterY
+			}
+
 			tileX := int(cameraX + float32(mouseX)/configuration.TileSizeX)
 			tileY := int(cameraY + float32(mouseY)/configuration.TileSizeY)
 
