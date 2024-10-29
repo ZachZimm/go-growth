@@ -148,23 +148,37 @@ func normalizeTileAltitudes() {
 	}
 }
 
+var (
+	deepWaterAltitude        = 0.18
+	initDeepWaterAltitude    = 0.18
+	shallowWaterAltitude     = 0.3
+	initShallowWaterAltitude = 0.3
+	// initSandAltitude      = 0.4
+	sandAltitude          = 0.4
+	grassAltitude         = 0.5
+	forestAltitude        = 0.7
+	dirtAltitude          = 0.82
+	mountainsAltitude     = 0.95
+	highMountainsAltitude = 1.0
+)
+
 func getTileFromFloatSwitch(tile float64) int {
 	// Find the bucket that the tile value falls into
 	// using a switch statement
 	switch {
-	case tile < 0.18:
+	case tile < deepWaterAltitude:
 		return deepWater
-	case tile < 0.3:
+	case tile < shallowWaterAltitude:
 		return shallowWater
-	case tile < 0.4:
+	case tile < sandAltitude:
 		return sand
-	case tile < 0.5:
+	case tile < grassAltitude:
 		return grass
-	case tile < 0.7:
+	case tile < forestAltitude:
 		return forest
-	case tile < 0.82:
+	case tile < dirtAltitude:
 		return dirt
-	case tile < 0.95:
+	case tile < mountainsAltitude:
 		return mountains
 	default:
 		return highMountains
@@ -564,29 +578,43 @@ func simulateNutrientDecay(cycleMultiplier float64) {
 	}
 }
 
+func simulateChangingSeaLevel(cycleMultiplier float64) {
+	altitudeRange := 0.065
+	sinValue := math.Sin(cycleMultiplier * math.Pi)
+	altitudeDiff := (altitudeRange * sinValue) - (altitudeRange / 2)
+	shallowWaterAltitude = initShallowWaterAltitude + altitudeDiff
+	deepWaterAltitude = initDeepWaterAltitude + (altitudeDiff / 2)
+}
+
 func runSimulation() {
 	endSimulation = false
 	var iterationsOfCycle float64 = math.Floor(rand.Float64() * ticksPerCycle)
+	var tock bool = true
 	var iterationAddAmount float64 = 1
 	ticker := time.NewTicker(updateInterval)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
-			cycleMultiplier := iterationsOfCycle / ticksPerCycle
-			simulateNutrientDecay(cycleMultiplier)
-			simulateWaterNutrition()
-			simulateInorganicNutrientDecay()
-			simulateNutrientGrowth()
-		}
+			if tock {
+				cycleMultiplier := iterationsOfCycle / ticksPerCycle
+				simulateChangingSeaLevel(cycleMultiplier)
+				setTileTypesFromAltitudes()
+				// simulateNutrientDecay(cycleMultiplier)
+				// simulateWaterNutrition()
+				// simulateInorganicNutrientDecay()
+				// simulateNutrientGrowth()
 
-		if iterationsOfCycle == ticksPerCycle || iterationsOfCycle == 0 {
-			iterationAddAmount = -iterationAddAmount
-		}
-		iterationsOfCycle += iterationAddAmount
+				if iterationsOfCycle == ticksPerCycle || iterationsOfCycle == 0 {
+					iterationAddAmount = -iterationAddAmount
+				}
+				iterationsOfCycle += iterationAddAmount
 
-		if endSimulation {
-			break
+			}
+			tock = !tock
+			if endSimulation {
+				break
+			}
 		}
 	}
 }
@@ -598,6 +626,7 @@ func resetSimulation() {
 	startTime := time.Now()
 	// initTiles()
 	generatePerlinMap(3)
+
 	// resetNutrientsMaps()
 	// addNutrients()
 	// addWaterPockets()
@@ -617,5 +646,5 @@ func resetSimulation() {
 	// leastConflicts(numTries/4, testRange-2)
 	fmt.Println("Finished generating world")
 	fmt.Printf("Time elapsed: %v\n", time.Since(startTime))
-	// go runSimulation()
+	go runSimulation()
 }
